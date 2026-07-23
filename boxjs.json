@@ -28,7 +28,7 @@
             "scripts": [
                 {
                     "name": "手动执行查询（⚠️ 执行前请确认配置正确）",
-                    "script": "https://raw.githubusercontent.com/Biiike/mobile_new/c3f3fd8b3fbcb80f1950895f4f8a03d2c6f953ba/10086.js"
+                    "script": "https://raw.githubusercontent.com/Biiike/mobile_new/ad59cb877d5ae5fa35b8db53a4d25436d0169602/10086.js"
                 }
             ],
             "settings": [
