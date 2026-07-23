@@ -14,10 +14,10 @@ silent = switch, false, true, tag = 静默模式, desc = 此开关控制插件�
 service = switch, false, true, tag = Scriptable服务模式, desc = 此开关控制插件是否开启Scriptable服务模式, 不用组件者请无视
 
 [Script]
-http-request ^https?:\/\/(?:client\.app\.coc\.10086\.cn|h\.app\.coc\.10086\.cn|app\.10086\.cn)\/biz-orange\/.*(?:uam(?:onekey|randcode)?login|realPersonAuthentication).* script-path = https://raw.githubusercontent.com/Biiike/mobile_new/ad59cb877d5ae5fa35b8db53a4d25436d0169602/10086.capture.js, requires-body = true, tag = 移动被动捕获参数和Cookie, enable = {enable_capture}
-http-response ^https?:\/\/(?:client\.app\.coc\.10086\.cn|h\.app\.coc\.10086\.cn|app\.10086\.cn)\/biz-orange\/.*(?:uam(?:onekey|randcode)?login|realPersonAuthentication).* script-path = https://raw.githubusercontent.com/Biiike/mobile_new/ad59cb877d5ae5fa35b8db53a4d25436d0169602/10086.capture.js, requires-body = true, tag = 移动被动捕获响应Cookie, enable = {enable_capture}
+http-request ^https?:\/\/(?:client\.app\.coc\.10086\.cn|h\.app\.coc\.10086\.cn|app\.10086\.cn)\/biz-orange\/.*(?:uam(?:onekey|randcode)?login|realPersonAuthentication).* script-path = https://raw.githubusercontent.com/Biiike/mobile_new/main/10086.capture.js, requires-body = true, tag = 移动被动捕获参数和Cookie, enable = {enable_capture}
+http-response ^https?:\/\/(?:client\.app\.coc\.10086\.cn|h\.app\.coc\.10086\.cn|app\.10086\.cn)\/biz-orange\/.*(?:uam(?:onekey|randcode)?login|realPersonAuthentication).* script-path = https://raw.githubusercontent.com/Biiike/mobile_new/main/10086.capture.js, requires-body = true, tag = 移动被动捕获响应Cookie, enable = {enable_capture}
 
-cron {cron} script-path = https://raw.githubusercontent.com/Biiike/mobile_new/ad59cb877d5ae5fa35b8db53a4d25436d0169602/10086.js, tag = 移动余量查询, timeout = 60, argument=[{phonenumber},{bark_key},{debug},{silent},{service}]
+cron {cron} script-path = https://raw.githubusercontent.com/Biiike/mobile_new/main/10086.js, tag = 移动余量查询, timeout = 60, argument=[{phonenumber},{bark_key},{debug},{silent},{service}]
 
 [MitM]
 hostname = client.app.coc.10086.cn, h.app.coc.10086.cn, app.10086.cn
