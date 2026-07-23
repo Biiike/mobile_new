@@ -14,10 +14,10 @@ silent = switch, false, true, tag = 静默模式, desc = 此开关控制插件�
 service = switch, false, true, tag = Scriptable服务模式, desc = 此开关控制插件是否开启Scriptable服务模式, 不用组件者请无视
 
 [Script]
-http-request ^https?:\/\/(?:client\.app\.coc\.10086\.cn|h\.app\.coc\.10086\.cn|app\.10086\.cn)\/biz-orange\/.*(?:uam(?:onekey|randcode)?login|realPersonAuthentication).* script-path = https://raw.githubusercontent.com/Biiike/mobile_new/5c43dac89ef313a9ee7d2a92f61de27a299dc30f/10086.js, requires-body = true, tag = 移动获取参数和Cookie, enable = {enable_capture}
-http-response ^https?:\/\/(?:client\.app\.coc\.10086\.cn|h\.app\.coc\.10086\.cn|app\.10086\.cn)\/biz-orange\/.*(?:uam(?:onekey|randcode)?login|realPersonAuthentication).* script-path = https://raw.githubusercontent.com/Biiike/mobile_new/5c43dac89ef313a9ee7d2a92f61de27a299dc30f/10086.js, requires-body = true, tag = 移动获取响应Cookie, enable = {enable_capture}
+http-request ^https?:\/\/(?:client\.app\.coc\.10086\.cn|h\.app\.coc\.10086\.cn|app\.10086\.cn)\/biz-orange\/.*(?:uam(?:onekey|randcode)?login|realPersonAuthentication).* script-path = https://raw.githubusercontent.com/Biiike/mobile_new/c3f3fd8b3fbcb80f1950895f4f8a03d2c6f953ba/10086.js, requires-body = true, tag = 移动获取参数和Cookie, enable = {enable_capture}
+http-response ^https?:\/\/(?:client\.app\.coc\.10086\.cn|h\.app\.coc\.10086\.cn|app\.10086\.cn)\/biz-orange\/.*(?:uam(?:onekey|randcode)?login|realPersonAuthentication).* script-path = https://raw.githubusercontent.com/Biiike/mobile_new/c3f3fd8b3fbcb80f1950895f4f8a03d2c6f953ba/10086.js, requires-body = true, tag = 移动获取响应Cookie, enable = {enable_capture}
 
-cron {cron} script-path = https://raw.githubusercontent.com/Biiike/mobile_new/5c43dac89ef313a9ee7d2a92f61de27a299dc30f/10086.js, tag = 移动余量查询, timeout = 60, argument=[{phonenumber},{bark_key},{debug},{silent},{service}]
+cron {cron} script-path = https://raw.githubusercontent.com/Biiike/mobile_new/c3f3fd8b3fbcb80f1950895f4f8a03d2c6f953ba/10086.js, tag = 移动余量查询, timeout = 60, argument=[{phonenumber},{bark_key},{debug},{silent},{service}]
 
 [MitM]
 hostname = client.app.coc.10086.cn, h.app.coc.10086.cn, app.10086.cn
