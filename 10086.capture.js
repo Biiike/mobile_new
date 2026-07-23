@@ -129,6 +129,9 @@
 
   try {
     if (typeof $response !== 'undefined' && $response) {
+      // Loon exposes the matching request in a response script; capture it here
+      // so no request-stage hook is needed.
+      if (typeof $request !== 'undefined' && $request) requestParams($request);
       var responseValue = responseCookie($response);
       if (responseValue) {
         write(COOKIE_KEY, mergeCookie(read(COOKIE_KEY), responseValue));
