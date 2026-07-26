@@ -148,6 +148,6 @@
   } catch (error) {
     console.log('⚠️ 捕获异常，已原样放行: ' + String(error && error.message || error));
   } finally {
-    $done();
+    $done({});
   }
 }());

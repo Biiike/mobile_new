@@ -2,7 +2,7 @@
 #!desc= 查询套餐内通话、套餐使用情况
 #!icon=https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/92/8b/03/928b0371-20fc-288b-e4e4-05f48b7082c2/AppIcon-0-0-1x_U007emarketing-0-7-0-0-85-220.png/120x120.png
 #!homepage=https://github.com/ChinaTelecomOperators/ChinaMobile
-#!date = 2026-07-23 20:15:00
+#!date = 2026-07-26 00:00:00
 
 [Argument]
 enable_capture = switch, false, true, tag = 捕获参数, desc = 此开关控制插件是否开启获取参数重写
