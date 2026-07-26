@@ -1,17 +1,7 @@
-// Passive Loon request capture helper. Every matched request is passed through unchanged.
+// Cache China Mobile business responses without changing the App traffic.
 (function () {
-  var COOKIE_KEY = 'china_mobile_cookie';
-  var PARAMS_KEY = 'china_mobile_params';
-  var URL_KEY = 'china_mobile_url';
-  var QEN_KEY = 'china_mobile_x_qen';
-
-  function read(key) {
-    try {
-      return $persistentStore.read(key) || '';
-    } catch (_) {
-      return '';
-    }
-  }
+  var FEE_CACHE_KEY = 'china_mobile_fee_cache_v1';
+  var PLAN_CACHE_KEY = 'china_mobile_plan_cache_v1';
 
   function write(key, value) {
     try {
@@ -30,72 +20,57 @@
     return '';
   }
 
-  function sessionId(request) {
-    if (!request) return '';
-    var cookie = String(header(request.headers || {}, 'cookie') || '');
-    var match = cookie.match(/(?:^|;\s*)JSESSIONID\s*=\s*"?([^;"\s]+)/i);
-    if (match && match[1]) return match[1];
-
-    var url = String(request.url || '');
-    match = url.match(/[?&#;]JSESSIONID=([^;&#\s]+)/i);
-    if (!match || !match[1]) return '';
-    try {
-      return decodeURIComponent(match[1]);
-    } catch (_) {
-      return match[1];
-    }
+  function responseKind(url) {
+    if (/realFeeQuery\/getRealFee/i.test(url)) return 'fee';
+    if (/newPlanRemainQry\/getNewPlanRemainQry/i.test(url)) return 'plan';
+    return '';
   }
 
-  function captureLoginParams(request) {
-    if (!request || !/autologin/i.test(String(request.url || ''))) return false;
-    var xqen = String(header(request.headers || {}, 'x-qen') || '').trim();
-    if (!/^(2|12|14)$/.test(xqen)) {
-      console.log('⚠️ 登录参数未保存：不支持的 x-qen=' + (xqen || '空'));
-      return true;
-    }
+  function capture() {
+    if (typeof $request === 'undefined' || !$request ||
+        typeof $response === 'undefined' || !$response) return;
 
-    var body = request.body;
+    var url = String($request.url || '');
+    var kind = responseKind(url);
+    if (!kind) return;
+
+    var body = $response.body;
     if (body == null || body === '') {
-      console.log('⚠️ 登录参数未保存：请求正文为空');
-      return true;
+      console.log('⚠️ App业务响应为空，未更新本地缓存');
+      return;
     }
     if (typeof body !== 'string') {
       try {
-        body = JSON.stringify(body);
+        body = String(body);
       } catch (_) {
-        console.log('⚠️ 登录参数未保存：无法读取请求正文');
-        return true;
+        console.log('⚠️ App业务响应无法读取，未更新本地缓存');
+        return;
       }
     }
 
-    write(PARAMS_KEY, body);
-    write(URL_KEY, request.url);
-    write(QEN_KEY, xqen);
-    console.log('✅ 登录参数捕获成功，请等待业务Cookie捕获成功');
-    return true;
-  }
-
-  function captureBusinessCookie(request) {
-    var value = sessionId(request);
-    if (!value) return;
-
-    // Only the authenticated session is needed. Replacing the old value avoids
-    // mixing an anonymous login cookie with the App's working business session.
-    var cookie = 'JSESSIONID=' + value;
-    if (read(COOKIE_KEY) !== cookie) {
-      write(COOKIE_KEY, cookie);
-      console.log('✅ 业务Cookie捕获成功（JSESSIONID）');
+    var headers = $response.headers || {};
+    var cache = {
+      body: body,
+      qen: String(header(headers, 'x-qen') || ''),
+      retcode: String(header(headers, 'retcode') || ''),
+      status: Number($response.statusCode || $response.status || 0),
+      capturedAt: Date.now(),
+      url: url
+    };
+    var key = kind === 'fee' ? FEE_CACHE_KEY : PLAN_CACHE_KEY;
+    if (write(key, JSON.stringify(cache))) {
+      console.log(kind === 'fee'
+        ? '✅ App话费数据缓存成功'
+        : '✅ App套餐数据缓存成功');
+    } else {
+      console.log('⚠️ App业务数据写入缓存失败');
     }
   }
 
   try {
-    if (typeof $request === 'undefined' || !$request) {
-      console.log('⚠️ 捕获脚本未收到请求对象');
-    } else if (!captureLoginParams($request)) {
-      captureBusinessCookie($request);
-    }
+    capture();
   } catch (error) {
-    console.log('⚠️ 捕获异常，已原样放行: ' + String(error && error.message || error));
+    console.log('⚠️ 缓存异常，已原样放行: ' + String(error && error.message || error));
   } finally {
     $done({});
   }
