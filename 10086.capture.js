@@ -1,4 +1,4 @@
-// Passive Loon capture helper. It never rewrites the app request or response.
+// Passive Loon request capture helper. Every matched request is passed through unchanged.
 (function () {
   var COOKIE_KEY = 'china_mobile_cookie';
   var PARAMS_KEY = 'china_mobile_params';
@@ -15,13 +15,10 @@
 
   function write(key, value) {
     try {
-      $persistentStore.write(String(value), key);
-    } catch (_) {}
-  }
-
-  function values(value) {
-    if (value == null) return [];
-    return Array.isArray(value) ? value : [value];
+      return $persistentStore.write(String(value), key);
+    } catch (_) {
+      return false;
+    }
   }
 
   function header(headers, name) {
@@ -33,117 +30,69 @@
     return '';
   }
 
-  function addCookie(map, part) {
-    var match = String(part || '').trim().match(/^([^=;\s]+)\s*=\s*([^;\s]*)/);
-    if (!match) return;
-    var name = match[1];
-    if (/^(path|domain|expires|max-age|secure|httponly|samesite|priority)$/i.test(name)) return;
-    map[name] = match[2];
-  }
-
-  function parseCookie(value, setCookie) {
-    var map = {};
-    values(value).forEach(function (item) {
-      var text = String(item || '').replace(/[\r\n]+/g, '\n');
-      if (setCookie) {
-        // Split only at commas that begin another cookie, keeping Expires dates intact.
-        text.split(/,(?=\s*[^=;,\s]+\s*=)/).forEach(function (cookie) {
-          addCookie(map, cookie);
-        });
-      } else {
-        text.split(/[;\n]/).forEach(function (cookie) {
-          addCookie(map, cookie);
-        });
-      }
-    });
-    return map;
-  }
-
-  function mergeCookie(oldValue, newValue) {
-    var map = parseCookie(oldValue, false);
-    var fresh = parseCookie(newValue, false);
-    Object.keys(fresh).forEach(function (key) {
-      map[key] = fresh[key];
-    });
-    return Object.keys(map).map(function (key) {
-      return key + '=' + map[key];
-    }).join('; ');
-  }
-
-  function responseCookie(response) {
-    if (!response) return '';
-    var headers = response.headers || {};
-    var map = {};
-    [header(headers, 'set-cookie'), header(headers, 'set-cookie2')].forEach(function (value) {
-      var parsed = parseCookie(value, true);
-      Object.keys(parsed).forEach(function (key) { map[key] = parsed[key]; });
-    });
-    var cookie = header(headers, 'cookie');
-    var requestCookies = parseCookie(cookie, false);
-    Object.keys(requestCookies).forEach(function (key) {
-      if (!(key in map)) map[key] = requestCookies[key];
-    });
-    var location = header(headers, 'location');
-    String(location || '').replace(/[?&#]JSESSIONID=([^;&#,]+)/i, function (_, value) {
-      map.JSESSIONID = value;
-      return _;
-    });
-    var body = typeof response.body === 'string' ? response.body : '';
-    body.replace(/JSESSIONID(?:%3D|=)([^%;&",\s]+)/ig, function (_, value) {
-      map.JSESSIONID = value;
-      return _;
-    });
-    return Object.keys(map).map(function (key) {
-      return key + '=' + map[key];
-    }).join('; ');
-  }
-
-  function requestCookie(request) {
+  function sessionId(request) {
     if (!request) return '';
-    var headers = request.headers || {};
-    var cookie = header(headers, 'cookie');
-    var setCookie = header(headers, 'set-cookie');
-    var map = parseCookie(cookie, false);
-    var fresh = parseCookie(setCookie, true);
-    Object.keys(fresh).forEach(function (key) { map[key] = fresh[key]; });
-    return Object.keys(map).map(function (key) {
-      return key + '=' + map[key];
-    }).join('; ');
+    var cookie = String(header(request.headers || {}, 'cookie') || '');
+    var match = cookie.match(/(?:^|;\s*)JSESSIONID\s*=\s*"?([^;"\s]+)/i);
+    if (match && match[1]) return match[1];
+
+    var url = String(request.url || '');
+    match = url.match(/[?&#;]JSESSIONID=([^;&#\s]+)/i);
+    if (!match || !match[1]) return '';
+    try {
+      return decodeURIComponent(match[1]);
+    } catch (_) {
+      return match[1];
+    }
   }
 
-  function requestParams(request) {
-    if (!request || !request.url) return;
+  function captureLoginParams(request) {
+    if (!request || !/autologin/i.test(String(request.url || ''))) return false;
     var xqen = String(header(request.headers || {}, 'x-qen') || '').trim();
-    if (!/^(2|12|14)$/.test(xqen)) return;
-    if (!/autologin/i.test(request.url)) return;
-    var body = request.body;
-    if (body == null || body === '') return;
-    if (typeof body !== 'string') {
-      try { body = JSON.stringify(body); } catch (_) { return; }
+    if (!/^(2|12|14)$/.test(xqen)) {
+      console.log('⚠️ 登录参数未保存：不支持的 x-qen=' + (xqen || '空'));
+      return true;
     }
+
+    var body = request.body;
+    if (body == null || body === '') {
+      console.log('⚠️ 登录参数未保存：请求正文为空');
+      return true;
+    }
+    if (typeof body !== 'string') {
+      try {
+        body = JSON.stringify(body);
+      } catch (_) {
+        console.log('⚠️ 登录参数未保存：无法读取请求正文');
+        return true;
+      }
+    }
+
     write(PARAMS_KEY, body);
     write(URL_KEY, request.url);
     write(QEN_KEY, xqen);
-    console.log('✅ 数据捕获成功');
+    console.log('✅ 登录参数捕获成功，请等待业务Cookie捕获成功');
+    return true;
+  }
+
+  function captureBusinessCookie(request) {
+    var value = sessionId(request);
+    if (!value) return;
+
+    // Only the authenticated session is needed. Replacing the old value avoids
+    // mixing an anonymous login cookie with the App's working business session.
+    var cookie = 'JSESSIONID=' + value;
+    if (read(COOKIE_KEY) !== cookie) {
+      write(COOKIE_KEY, cookie);
+      console.log('✅ 业务Cookie捕获成功（JSESSIONID）');
+    }
   }
 
   try {
-    if (typeof $response !== 'undefined' && $response) {
-      // Loon exposes the matching request in a response script; capture it here
-      // so no request-stage hook is needed.
-      if (typeof $request !== 'undefined' && $request) requestParams($request);
-      var responseValue = responseCookie($response);
-      if (responseValue) {
-        write(COOKIE_KEY, mergeCookie(read(COOKIE_KEY), responseValue));
-        console.log('✅ Cookie捕获成功');
-      }
-    } else if (typeof $request !== 'undefined' && $request) {
-      var requestValue = requestCookie($request);
-      if (requestValue) {
-        write(COOKIE_KEY, mergeCookie(read(COOKIE_KEY), requestValue));
-        console.log('✅ Cookie捕获成功');
-      }
-      requestParams($request);
+    if (typeof $request === 'undefined' || !$request) {
+      console.log('⚠️ 捕获脚本未收到请求对象');
+    } else if (!captureLoginParams($request)) {
+      captureBusinessCookie($request);
     }
   } catch (error) {
     console.log('⚠️ 捕获异常，已原样放行: ' + String(error && error.message || error));
